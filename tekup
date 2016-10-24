@@ -26,6 +26,9 @@ export -f err
 usage() {
   LESS=-FEXR less <<-'HELP'
 Usage: tekup [OPTIONS] [FILES..]
+Upload files to https://teknik.io
+
+OPTIONS:
   -h          print this help
   -p [NUMBER] use [NUMBER] of concurrent processes to upload files with.
               defaults to 1
