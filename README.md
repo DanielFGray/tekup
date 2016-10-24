@@ -1,5 +1,5 @@
 # tekup
-Command line script to upload files to http://teknik.io
+Command line script to upload files to https://teknik.io
 
 ## Usage
 
