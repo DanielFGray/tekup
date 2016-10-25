@@ -13,3 +13,7 @@ Usage: tekup [OPTIONS] [FILES..]
               the JSON response from teknik, the second will also pass the
               -v option to curl
 ```
+
+## See also
+
+* [yaxg](https://github.com/DanielFGray/yaxg) - for recording screenshots
