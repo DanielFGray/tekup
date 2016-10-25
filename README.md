@@ -4,7 +4,7 @@ Command line script to upload files to https://teknik.io
 ## Usage
 
 ```
-Usage: tekup [OPTIONS] [FILES..]
+Usage: tekup [OPTIONS] FILES..
   -h          print this help
   -p [NUMBER] use [NUMBER] of concurrent processes to upload files with.
               defaults to 1

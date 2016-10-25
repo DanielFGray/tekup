@@ -25,7 +25,7 @@ export -f err
 
 usage() {
   LESS=-FEXR less <<-'HELP'
-Usage: tekup [OPTIONS] [FILES..]
+Usage: tekup [OPTIONS] FILES..
 Upload files to https://teknik.io
 
 OPTIONS:
