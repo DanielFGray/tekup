@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 
-declare -r esc=$'\033'
-declare -r c_reset="${esc}[0m"
-declare -r c_red="${esc}[31m"
-declare -r c_blue="${esc}[34m"
 declare verbose=0
 declare processes=1
+declare -r c_red=$(tput setaf 1)
+declare -r c_blue=$(tput setaf 4)
+declare -r c_reset=$(tput sgr0)
 
 info() {
   printf "${c_blue}%s${c_reset}\n" "$1" >&2
