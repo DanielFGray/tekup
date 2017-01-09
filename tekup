@@ -38,6 +38,20 @@ OPTIONS:
 HELP
 }
 
+has() {
+  local verbose
+  if [[ $1 = '-v' ]]; then
+    verbose=1
+    shift
+  fi
+  for c; do c="${c%% *}"
+    if ! command -v "$c" &> /dev/null; then
+      (( "$verbose" > 0 )) && err "$c not found"
+      return 1
+    fi
+  done
+}
+
 upload() {
   local file mime url post curl_verbosity
   file="$1"
@@ -47,7 +61,7 @@ upload() {
     return 1
   fi
 
-  mime=$(file -ib "$file")
+  mime=$(file -Lib "$file")
   mime="${mime%%/*}"
 
   if (( verbose < 1 )); then
@@ -58,7 +72,7 @@ upload() {
     curl_verbosity='-v'
   fi
 
-  if [[ $mime == 'text' ]]; then
+  if [[ $mime = 'text' ]]; then
     post=$(command curl ${curl_verbosity} --data "title=${file##*/}" --data-urlencode "code=$(< "${file}")" https://api.teknik.io/v1/Paste)
   else
     post=$(command curl ${curl_verbosity} -F "contentType=${mime}" -F "file=@${file}" https://api.teknik.io/v1/Upload)
@@ -66,16 +80,16 @@ upload() {
 
   (( verbose > 0 )) && info "response: ${c_reset}${post}"
 
-  [[ -z "$post" || "$post" != *'http'* || "$post" == *'error'* ]] && die "error uploading ${file}"
+  [[ -z "$post" || "$post" != *'http'* || "$post" = *'error'* ]] && die "error uploading ${file}"
 
   url=$(grep -oP 'https://[[:alnum:]?=%/_.:,;~@!#$&()*+-]+' <<< "$post")
-  shorten="${url/upload/u}"
-  shorten="${url/paste/p}"
-  printf '%s: %s\n' "$file" "$shorten"
+  url="${url/upload/u}"
+  url="${url/paste/p}"
+  printf '%s: %s\n' "$file" "$url"
 }
 export -f upload
 
-command -v curl &> /dev/null || die 'curl not found'
+has -v curl || die
 
 OPTERR=0
 while getopts "hvp:" opt; do
