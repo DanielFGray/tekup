@@ -2,6 +2,10 @@
 
 declare verbose=0
 declare processes=1
+declare expire
+declare delete_key
+declare log_file
+declare -r config_file="${XDG_CONFIG_DIR:-$HOME/.config}/fzmp/conf"
 declare -r c_red=$(tput setaf 1)
 declare -r c_blue=$(tput setaf 4)
 declare -r c_reset=$(tput sgr0)
@@ -28,13 +32,16 @@ Usage: tekup [OPTIONS] FILES..
 Upload files to https://teknik.io
 
 OPTIONS:
-  -h          print this help
-  -p [NUMBER] use [NUMBER] of concurrent processes to upload files with.
-              defaults to 1
-  -v          print verbose output. there are two levels of verbosity
-              (because this thing is over-engineered), the first will print
-              the JSON response from teknik, the second will also pass the
-              -v option to curl
+  -h           print this help
+  -v           print verbose output. there are two levels of verbosity
+               (because this thing is over-engineered), the first will print
+               the JSON response from teknik, the second will also pass the
+               -v option to curl
+  -e <STRING>  expiration time. only has an effect on text pastes.
+               must be in the form of 'N UNITS' where N is a number
+               and UNIT is one of the following:
+               minute hour day month year
+  -d           request a deletion key for images
 HELP
 }
 
@@ -52,55 +59,142 @@ has() {
   done
 }
 
-upload() {
-  local file mime url post curl_verbosity
-  file="$1"
-
-  if [[ ! -e "$file" ]]; then
-    err "$file does not exist"
-    return 1
-  fi
-
-  mime=$(file -Lib "$file")
-  mime="${mime%%/*}"
-
-  if (( verbose < 1 )); then
-    curl_verbosity='-s'
-  elif (( verbose == 1)); then
-    curl_verbosity=''
-  else
-    curl_verbosity='-v'
-  fi
-
-  if [[ $mime = 'text' ]]; then
-    post=$(command curl ${curl_verbosity} --data "title=${file##*/}" --data-urlencode "code=$(< "${file}")" https://api.teknik.io/v1/Paste)
-  else
-    post=$(command curl ${curl_verbosity} -F "contentType=${mime}" -F "file=@${file}" https://api.teknik.io/v1/Upload)
-  fi
-
-  (( verbose > 0 )) && info "response: ${c_reset}${post}"
-
-  [[ -z "$post" || "$post" != *'http'* || "$post" = *'error'* ]] && die "error uploading ${file}"
-
-  url=$(grep -oP 'https://[[:alnum:]?=%/_.:,;~@!#$&()*+-]+' <<< "$post")
-  url="${url/upload/u}"
-  url="${url/paste/p}"
-  printf '%s: %s\n' "$file" "$url"
+parse_config_file() {
+  local line key val nr=0
+  while IFS= read -r line; do
+    (( ++nr ))
+    [[ -z "$line" || "$line" = '#'* ]] && continue
+    read -r key <<< "${line%% *}"
+    read -r val <<< "${line#* }"
+    if [[ -z "$val" ]]; then
+      config_err+=( "missing value for \"$key\" in config file on line $nr" )
+      continue
+    fi
+    case "$key" in
+      log_file) log_file="$val" ;;
+      generate_deletion_key) log_file="$val" ;;
+      # full_song_format) track_format="$val" ;;
+      # fzf_options) [[ ! -v FZMP_FZF_OPTIONS ]] && FZMP_FZF_OPTIONS="$val" ;;
+      # default_view)
+      #   if [[ "$val" =~ playlist|songs|artists ]]; then
+      #     case "$val" in
+      #       playlist) default_filter='filter_by_playlist' ;;
+      #       songs) default_filter='filter_all_songs' ;;
+      #       artists) default_filter='filter_by_artist' ;;
+      #     esac
+      #   else
+      #     config_err+=( "unknown vi \"$val\" in config file on line $nr" )
+      #   fi
+      #   ;;
+      *) config_err+=( "unknown key \"$key\" in config file on line $nr" )
+    esac
+  done
 }
-export -f upload
 
-has -v curl || die
+
+upload_text() {
+  local file curl_opts
+  file="$1"
+  shift
+  curl_opts=()
+  case "$verbose" in
+    0) curl_opts+=( -s ) ;;
+    2) curl_opts+=( -v ) ;;
+  esac
+
+  if [[ -n "$expire" ]]; then
+    printf -v expire_length '%d' "${expire% *}"
+    expire_unit="${expire#* }"
+    curl_opts+=( --data "expireLength=${expire_length}&expireUnit=${expire_unit/%s}" )
+  fi
+  curl_opts+=( --data "doNotTrack=true&title=${file##*/}" --data-urlencode "code=$(< "$file")" https://api.teknik.io/v1/Paste)
+  curl "${curl_opts[@]}" | parse_response
+}
+
+upload_file() {
+  local file mime curl_opts
+  file="$1"
+  mime="$2"
+  shift 2
+  curl_opts=()
+  case "$verbose" in
+    0) curl_opts+=( -s ) ;;
+    2) curl_opts+=( -v ) ;;
+  esac
+
+  [[ -n "$delete_key" ]] &&
+    curl_opts+=( -F 'genDeletionKey=true' )
+  curl_opts+=(   -F 'doNotTrack=true'
+                 -F "contentType=${mime%%;*}"
+                 -F "file=@${file}"
+                 https://api.teknik.io/v1/Upload )
+  curl "${curl_opts[@]}" | parse_response
+}
+
+upload_files() {
+  local curl_opts f mime
+
+  for f; do
+    if [[ ! -e "$f" ]]; then
+      err "$f does not exist"
+      continue
+    fi
+
+    mime=$(file -Lib "$f")
+    if [[ "${mime%%/*}" = 'text' ]]; then
+      upload_text "$f"
+    else
+      upload_file "$f" "${mime%%/*}"
+    fi
+
+  done
+}
+
+parse_response() {
+  local url deletion_key
+  read -r response
+
+  (( verbose > 0 )) && jq <<< "$response"
+
+  if [[ "$response" != *'http'* || -z "$response" || "$response" = *'error'* ]]; then
+    err "error uploading $file"
+    if (( verbose < 1 )); then
+      if [[ "$response" = *'error'* ]]; then
+        err "$(jq -r '.error.message' <<< "$response")"
+      elif [[ -n "$response" ]]; then
+        err "$response"
+      fi
+    fi
+    die
+  fi
+
+  url=$(jq -r '.result.url' <<< "$response")
+
+  url="${url/paste.teknik.io/p.teknik.io\/Raw}"
+  url="${url/upload/u}"
+
+  printf '%s: %s\n' "$file" "$url"
+  if [[ "$response" != *'deletionKey: null"'* ]]; then
+    printf 'deletion_key: %s/%s\n' "$url" "$(jq -r '.result.deletionKey' <<< "$response")"
+  fi
+}
+
+has -v curl jq || die
+
+[[ -s "$config_file" ]] && parse_config_file < "$config_file"
 
 OPTERR=0
-while getopts "hvp:" opt; do
+while getopts 'hve:p:' opt; do
   case "$opt" in
     h) usage; exit 0 ;;
-    v) (( verbose++ )) ;;
-    p) processes="$OPTARG" ;;
+    v) (( ++verbose )) ;;
+    e) expire="$OPTARG" ;;
+    d) delete_key=1 ;;
   esac
 done
-shift "$((OPTIND-1))"
+shift $(( OPTIND - 1 ))
+unset OPTIND
 
 (( $# > 0 )) || die 'No files to upload.'
 
-printf '%s\n' "$@" | xargs -P"$processes" -I% bash -c 'upload %'
+upload_files "$@"
