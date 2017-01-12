@@ -173,9 +173,14 @@ parse_response() {
   url="${url/upload/u}"
 
   printf '%s: %s\n' "$file" "$url"
-  deletionKey=$(jq -r '.result.deletionKey' <<< "$response")
-  if [[ "$deletionKey" != null ]]; then
-    printf 'deletion_key: %s/%s\n' "$url" "$(jq -r '.result.deletionKey' <<< "$response")"
+  if [[ -n "$delete_key" ]]; then
+    deletionKey=$(jq -r '.result.deletionKey' <<< "$response")
+    # [[ "$deletionKey" != null ]] &&
+      printf 'deletion_key: %s/%s\n' "$url" "$deletionKey"
+  elif [[ -n "$expire" ]]; then
+    expire_time=$(jq -r '.result.expiration | match("[0-9]+").string' <<< "$response")
+    # [[ "$expire_time" = null ]] &&
+      printf 'expires at: %s\n' "$(date -d "@$expire_time")"
   fi
 }
 
