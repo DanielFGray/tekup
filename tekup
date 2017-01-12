@@ -91,7 +91,6 @@ parse_config_file() {
   done
 }
 
-
 upload_text() {
   local file curl_opts
   file="$1"
@@ -174,7 +173,8 @@ parse_response() {
   url="${url/upload/u}"
 
   printf '%s: %s\n' "$file" "$url"
-  if [[ "$response" != *'deletionKey: null"'* ]]; then
+  deletionKey=$(jq -r '.result.deletionKey' <<< "$response")
+  if [[ "$deletionKey" != null ]]; then
     printf 'deletion_key: %s/%s\n' "$url" "$(jq -r '.result.deletionKey' <<< "$response")"
   fi
 }
@@ -184,7 +184,7 @@ has -v curl jq || die
 [[ -s "$config_file" ]] && parse_config_file < "$config_file"
 
 OPTERR=0
-while getopts 'hve:p:' opt; do
+while getopts 'hve:d' opt; do
   case "$opt" in
     h) usage; exit 0 ;;
     v) (( ++verbose )) ;;
