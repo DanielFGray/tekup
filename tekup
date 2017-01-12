@@ -5,7 +5,6 @@ declare processes=1
 declare expire
 declare delete_key
 declare log_file
-declare -r config_file="${XDG_CONFIG_DIR:-$HOME/.config}/fzmp/conf"
 declare -r c_red=$(tput setaf 1)
 declare -r c_blue=$(tput setaf 4)
 declare -r c_reset=$(tput sgr0)
@@ -56,38 +55,6 @@ has() {
       (( "$verbose" > 0 )) && err "$c not found"
       return 1
     fi
-  done
-}
-
-parse_config_file() {
-  local line key val nr=0
-  while IFS= read -r line; do
-    (( ++nr ))
-    [[ -z "$line" || "$line" = '#'* ]] && continue
-    read -r key <<< "${line%% *}"
-    read -r val <<< "${line#* }"
-    if [[ -z "$val" ]]; then
-      config_err+=( "missing value for \"$key\" in config file on line $nr" )
-      continue
-    fi
-    case "$key" in
-      log_file) log_file="$val" ;;
-      generate_deletion_key) log_file="$val" ;;
-      # full_song_format) track_format="$val" ;;
-      # fzf_options) [[ ! -v FZMP_FZF_OPTIONS ]] && FZMP_FZF_OPTIONS="$val" ;;
-      # default_view)
-      #   if [[ "$val" =~ playlist|songs|artists ]]; then
-      #     case "$val" in
-      #       playlist) default_filter='filter_by_playlist' ;;
-      #       songs) default_filter='filter_all_songs' ;;
-      #       artists) default_filter='filter_by_artist' ;;
-      #     esac
-      #   else
-      #     config_err+=( "unknown vi \"$val\" in config file on line $nr" )
-      #   fi
-      #   ;;
-      *) config_err+=( "unknown key \"$key\" in config file on line $nr" )
-    esac
   done
 }
 
@@ -185,8 +152,6 @@ parse_response() {
 }
 
 has -v curl jq || die
-
-[[ -s "$config_file" ]] && parse_config_file < "$config_file"
 
 OPTERR=0
 while getopts 'hve:d' opt; do
