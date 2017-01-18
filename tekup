@@ -2,8 +2,8 @@
 
 declare verbose=0
 declare processes=1
-declare expire
-declare delete_key
+declare expire_length
+declare request_deletion_key
 declare log_file
 declare -r c_red=$(tput setaf 1)
 declare -r c_blue=$(tput setaf 4)
@@ -32,15 +32,15 @@ Upload files to https://teknik.io
 
 OPTIONS:
   -h           print this help
-  -v           print verbose output. there are two levels of verbosity
-               (because this thing is over-engineered), the first will print
-               the JSON response from teknik, the second will also pass the
-               -v option to curl
+  -v           print verbose output. can be stacked. there are two levels of
+               verbosity (because this thing is over-engineered), the first
+               will print the JSON response from teknik, the second will also
+               pass the -v option to curl
+  -d           request a deletion key for images
   -e <STRING>  expiration time. only has an effect on text pastes.
                must be in the form of 'N UNITS' where N is a number
                and UNIT is one of the following:
                minute hour day month year
-  -d           request a deletion key for images
 HELP
 }
 
@@ -68,9 +68,9 @@ upload_text() {
     2) curl_opts+=( -v ) ;;
   esac
 
-  if [[ -n "$expire" ]]; then
-    printf -v expire_length '%d' "${expire% *}"
-    expire_unit="${expire#* }"
+  if [[ -n "$expire_length" ]]; then
+    printf -v expire_length '%d' "${expire_length% *}"
+    expire_unit="${expire_length#* }"
     curl_opts+=( --data "expireLength=${expire_length}&expireUnit=${expire_unit/%s}" )
   fi
   curl_opts+=( --data "doNotTrack=true&title=${file##*/}" --data-urlencode "code=$(< "$file")" https://api.teknik.io/v1/Paste)
@@ -88,7 +88,7 @@ upload_file() {
     2) curl_opts+=( -v ) ;;
   esac
 
-  [[ -n "$delete_key" ]] &&
+  [[ -n "$request_deletion_key" ]] &&
     curl_opts+=( -F 'genDeletionKey=true' )
   curl_opts+=(   -F 'doNotTrack=true'
                  -F "contentType=${mime%%;*}"
@@ -110,14 +110,13 @@ upload_files() {
     if [[ "${mime%%/*}" = 'text' ]]; then
       upload_text "$f"
     else
-      upload_file "$f" "${mime%%/*}"
+      upload_file "$f" "$mime"
     fi
-
   done
 }
 
 parse_response() {
-  local url deletion_key
+  local url deletion_key expire_date
   read -r response
 
   (( verbose > 0 )) && jq <<< "$response"
@@ -140,14 +139,14 @@ parse_response() {
   url="${url/upload/u}"
 
   printf '%s: %s\n' "$file" "$url"
-  if [[ -n "$delete_key" ]]; then
-    deletionKey=$(jq -r '.result.deletionKey' <<< "$response")
-    # [[ "$deletionKey" != null ]] &&
-      printf 'deletion_key: %s/%s\n' "$url" "$deletionKey"
-  elif [[ -n "$expire" ]]; then
-    expire_time=$(jq -r '.result.expiration | match("[0-9]+").string' <<< "$response")
-    # [[ "$expire_time" = null ]] &&
-      printf 'expires at: %s\n' "$(date -d "@$expire_time")"
+  if [[ -n "$request_deletion_key" ]]; then
+    deletion_key=$(jq -r '.result.deletion_key' <<< "$response")
+    # [[ "$deletion_key" != null ]] &&
+      printf 'deletion_key: %s/%s\n' "$url" "$deletion_key"
+  elif [[ -n "$expire_date" ]]; then
+    expire_date=$(jq -r '.result.expiration | match("[0-9]+").string' <<< "$response")
+    # [[ "$expire_date" = null ]] &&
+      printf 'expires at: %s\n' "$(date -d "@$expire_date")"
   fi
 }
 
@@ -158,8 +157,8 @@ while getopts 'hve:d' opt; do
   case "$opt" in
     h) usage; exit 0 ;;
     v) (( ++verbose )) ;;
-    e) expire="$OPTARG" ;;
-    d) delete_key=1 ;;
+    e) expire_length="$OPTARG" ;;
+    d) request_deletion_key=1 ;;
   esac
 done
 shift $(( OPTIND - 1 ))
