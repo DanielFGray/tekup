@@ -23,9 +23,9 @@ Usage: tekup [OPTIONS] FILES..
 
 ## Example:
 
-`` bash
+``` bash
 tekup -e '5 minutes' -d some.txt some.png
-``
+```
 
 This will upload two files, `some.txt` will self-destruct after 5 minutes, and will also print a url that will delete `some.png`.
 
