@@ -1,6 +1,10 @@
 # tekup
 Command line script to upload files to https://teknik.io
 
+## Dependencies
+
+[jq](https://github.com/stedolan/jq) - for parsing JSON response
+
 ## Usage
 
 ```
