@@ -21,6 +21,14 @@ Usage: tekup [OPTIONS] FILES..
                minute hour day month year
 ```
 
+## Example:
+
+`` bash
+tekup -e '5 minutes' -d some.txt some.png
+``
+
+This will upload two files, `some.txt` will self-destruct after 5 minutes, and will also print a url that will delete `some.png`.
+
 ## See also
 
 * [yaxg](https://github.com/DanielFGray/yaxg) - for recording screenshots
