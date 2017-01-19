@@ -67,7 +67,7 @@ upload_text() {
 
   if [[ -n "$expire_length" ]]; then
     printf -v expire_l '%d' "${expire_length% *}"
-    expire_unit="${expire_l#* }"
+    expire_unit="${expire_length#* }"
     curl_opts+=( --data "expireLength=${expire_l}&expireUnit=${expire_unit/%s}")
   fi
   curl_opts+=(
@@ -135,15 +135,17 @@ parse_response() {
   url="${url/paste.teknik.io/p.teknik.io\/Raw}"
   url="${url/upload/u}"
 
-  printf '%s: %s\n' "$file" "$url"
+  printf '%s: %s\n' "${file/\/tmp\/tekup_paste/stdin}" "$url"
 
   if [[ -w "$log_file" || -n "$request_deletion_key" ]]; then
     deletion_key=$(jq -r '.result.deletionKey' <<< "$response") || jq "$response"
+    [[ "$deletion_key" = null ]] && deletion_key=''
     [[ -n "$deletion_key" ]] && printf 'deletion key: %s/%s\n' "$url" "$deletion_key"
   fi
 
   if [[ -n "$expire_length" ]]; then
-    expire_date=$(jq -r '.result.expiration | match("[0-9]+").string' <<< "$response") || jq "$response"
+    expire_date=$(jq -r '.result.expiration | (match("[0-9]+").string)? // .result.expiration' <<< "$response")
+    [[ "$expire_date" = null ]] && expire_date=''
     [[ -n "$expire_date" ]] &&
       printf 'expires at: %s\n' "$(date -d "@$expire_date")"
   fi
@@ -157,6 +159,12 @@ parse_response() {
     echo "$log_msg" >> "$log_file"
   fi
 }
+
+finish() {
+  [[ -e /tmp/tekup_paste ]] && rm /tmp/tekup_paste
+}
+
+trap finish SIGHUP SIGINT SIGTERM
 
 has -v curl jq || die
 
@@ -172,6 +180,15 @@ done
 shift $(( OPTIND - 1 ))
 unset opt OPTARG OPTIND
 
-(( $# > 0 )) || die 'No files to upload.'
+files=( "$@" )
 
-upload_files "$@"
+if (( $# == 0 )); then
+  echo 'reading from stdin'
+  read -r
+  echo "$REPLY" > /tmp/tekup_paste
+  upload_text /tmp/tekup_paste
+  exit
+fi
+
+upload_files "${files[@]}"
+finish
