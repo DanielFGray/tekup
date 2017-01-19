@@ -124,10 +124,7 @@ parse_response() {
 
   if [[ "$response" != *'http'* || -z "$response" || "$response" = *'error'* ]]; then
     err "error uploading $file"
-    if (( verbose < 1 )); then
-      err "$(jq -r '.error.message' <<< "$response")" || err "$response"
-    fi
-    die
+    die "$(jq -r '.error.message' <<< "$response")"
   fi
 
   url=$(jq -r '.result.url' <<< "$response")
@@ -135,10 +132,11 @@ parse_response() {
   url="${url/paste.teknik.io/p.teknik.io\/Raw}"
   url="${url/upload/u}"
 
-  printf '%s: %s\n' "${file/\/tmp\/tekup_paste/stdin}" "$url"
+  file="${file/\/tmp\/tekup_paste/stdin}"
+  printf '%s: %s\n' "$file" "$url"
 
   if [[ -w "$log_file" || -n "$request_deletion_key" ]]; then
-    deletion_key=$(jq -r '.result.deletionKey' <<< "$response") || jq "$response"
+    deletion_key=$(jq -r '.result.deletionKey' <<< "$response")
     [[ "$deletion_key" = null ]] && deletion_key=''
     [[ -n "$deletion_key" ]] && printf 'deletion key: %s/%s\n' "$url" "$deletion_key"
   fi
