@@ -184,10 +184,8 @@ files=( "$@" )
 
 if (( $# == 0 )); then
   echo 'reading from stdin'
-  read -r
-  echo "$REPLY" > /tmp/tekup_paste
-  upload_text /tmp/tekup_paste
-  exit
+  tee /tmp/tekup_paste &> /dev/null
+  files+=( /tmp/tekup_paste )
 fi
 
 upload_files "${files[@]}"
