@@ -180,7 +180,7 @@ unset opt OPTARG OPTIND
 
 files=( "$@" )
 
-if (( $# == 0 )); then
+if read -r -t0 || (( $# == 0 )); then
   echo 'reading from stdin'
   tee /tmp/tekup_paste &> /dev/null
   files+=( /tmp/tekup_paste )
