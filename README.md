@@ -8,7 +8,7 @@ Command line script to upload files to https://teknik.io
 ## Usage
 
 ```
-Usage: tekup [OPTIONS] FILES..
+Usage: tekup [OPTIONS] [FILES...]
   -h           print this help
   -d           request a deletion key for images
   -e <STRING>  expiration time. only has an effect on text pastes.
