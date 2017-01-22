@@ -3,8 +3,8 @@ Command line script to upload files to https://teknik.io
 
 ## Dependencies
 
-[curl](https://github.com/curl/curl) - for network I/O
-[jq](https://github.com/stedolan/jq) - for parsing JSON response
+* [curl](https://github.com/curl/curl) - for network I/O
+* [jq](https://github.com/stedolan/jq) - for parsing JSON response
 
 ## Usage
 
