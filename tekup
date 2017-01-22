@@ -5,6 +5,7 @@ declare expire_length
 declare request_deletion_key
 declare -A colors
 declare -r log_file="${XDG_CONFIG_DIR:-$HOME/.config}/tekup/log"
+declare -r config_file="${XDG_CONFIG_DIR:-$HOME/.config}/tekup/conf"
 colors[red]=$(tput setaf 1)
 colors[reset]=$(tput sgr0)
 
@@ -29,11 +30,22 @@ OPTIONS:
                must be in the form of 'N UNIT' where N is a number
                and UNIT is one of the following:
                minute hour day month year
+  -N           disables expiring pastes (if enabled in config file, for example)
   -v           print verbose output. can be stacked. there are three levels of
                verbosity (because this thing is over-engineered)
                first will show progress from curl
                second will print the json response
                third will show verbose output from curl
+
+CONFIGURATION:
+  A configuration file can be defined at $XDG_CONFIG_DIR/tekup/conf (defaults to ~/.config/tekup)
+  If a line begins with '#' it is treated as a comment and ignored
+  The configuration file reads the following options:
+
+  username       teknik.io username
+  api_key        teknik.io api key
+  expire_length  same as -e flag above
+  do_not_track   asks teknik.io not to log the upload
 
 If ~/.config/tekup/log is a writeable file tekup will always ask for a
 deletion key and log it in that file.
@@ -54,6 +66,27 @@ has() {
   done
 }
 
+parse_config_file() {
+  local line key val nr=0
+  while IFS= read -r line; do
+    (( ++nr ))
+    [[ -z "$line" || "$line" = '#'* ]] && continue
+    read -r key <<< "${line%% *}"
+    read -r val <<< "${line#* }"
+    if [[ -z "$val" ]]; then
+      config_err+=( "missing value for \"$key\" in config file on line $nr" )
+      continue
+    fi
+    case "$key" in
+      expire_length) expire_length="$val" ;;
+      username) username="$val" ;;
+      api_key)  api_key="$val" ;;
+      do_not_track) do_not_track="$val" ;;
+      *) config_err+=( "unknown key \"$key\" in config file on line $nr" )
+    esac
+  done
+}
+
 upload_text() {
   local file curl_opts expire_unit
   file="$1"
@@ -65,13 +98,19 @@ upload_text() {
     *) curl_opts+=( -v ) ;;
   esac
 
+  [[ -n "$username" && -n "$api_key" ]] &&
+    curl_opts+=( -u "${username}:${api_key}" )
+
   if [[ -n "$expire_length" ]]; then
     printf -v expire_l '%d' "${expire_length% *}"
     expire_unit="${expire_length#* }"
     curl_opts+=( --data "expireLength=${expire_l}&expireUnit=${expire_unit/%s}")
   fi
+
+  curl_opts+=( ${do_not_track:+ --data "doNotTrack=${do_not_track}"} )
+
   curl_opts+=(
-    --data "doNotTrack=true&title=${file##*/}"
+    --data "title=${file##*/}"
     --data-urlencode "code=$(< "$file")"
     https://api.teknik.io/v1/Paste )
   curl "${curl_opts[@]}" | parse_response
@@ -89,10 +128,15 @@ upload_file() {
     *) curl_opts+=( -v ) ;;
   esac
 
+  [[ -n "$username" && -n "$api_key" ]] &&
+    curl_opts+=( -u "${username}:${api_key}" )
+
+  curl_opts+=( ${do_not_track:+ -F "doNotTrack=${do_not_track}"} )
+
   [[ -w "$log_file" || -n "$request_deletion_key" ]] &&
     curl_opts+=( -F 'genDeletionKey=true' )
-  curl_opts+=(   -F 'doNotTrack=true'
-                 -F "contentType=${mime%%;*}"
+
+  curl_opts+=(   -F "contentType=${mime%%;*}"
                  -F "file=@${file}"
                  https://api.teknik.io/v1/Upload )
   curl "${curl_opts[@]}" | parse_response
