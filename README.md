@@ -25,9 +25,9 @@ Usage: tekup [OPTIONS] [FILES...]
 ```
 
 ## Configuration
-  A configuration file can be defined at $XDG_CONFIG_DIR/tekup/conf (defaults to ~/.config/tekup)
-  If a line begins with '#' it is treated as a comment and ignored
-  The configuration file reads the following options:
+A configuration file can be defined at `$XDG_CONFIG_DIR/tekup/conf` (defaults to `~/.config/tekup`)  
+If a line begins with '#' it is treated as a comment and ignored  
+The configuration file reads the following options:  
 
 ```
 username       teknik.io username
