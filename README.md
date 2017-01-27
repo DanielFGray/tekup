@@ -22,20 +22,22 @@ Usage: tekup [OPTIONS] [FILES...]
                first will show progress from curl
                second will print the json response
                third will show verbose output from curl
+```
 
-CONFIGURATION:
+## Configuration
   A configuration file can be defined at $XDG_CONFIG_DIR/tekup/conf (defaults to ~/.config/tekup)
   If a line begins with '#' it is treated as a comment and ignored
   The configuration file reads the following options:
 
-  username       teknik.io username
-  api_key        teknik.io api key
-  expire_length  same as -e flag above
-  do_not_track   asks teknik.io not to log the upload
-  verbose_level  must be a number
+```
+username       teknik.io username
+api_key        teknik.io api key
+expire_length  same as -e flag above
+do_not_track   asks teknik.io not to log the upload
+verbose_level  must be a number
+```
 
 If `~/.config/tekup/log` is a writeable file tekup will always ask for a deletion key and log it in that file.
-```
 
 ## Example:
 
