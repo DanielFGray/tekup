@@ -84,9 +84,10 @@ parse_config_file() {
       username) username="$val" ;;
       api_key)  api_key="$val" ;;
       do_not_track) do_not_track="$val" ;;
+      verbose_level) verbose="$val" ;;
       *) config_err+=( "unknown key \"$key\" in config file on line $nr" )
     esac
-  done
+  done < "$config_file"
 }
 
 upload_text() {
@@ -96,7 +97,7 @@ upload_text() {
   curl_opts=()
   case "$verbose" in
     0) curl_opts+=( -s ) ;;
-    1|2) curl_opts+=( ) ;;
+    1|2) curl_opts+=( -# ) ;;
     *) curl_opts+=( -v ) ;;
   esac
 
@@ -126,7 +127,7 @@ upload_file() {
   curl_opts=()
   case "$verbose" in
     0) curl_opts+=( -s ) ;;
-    1|2) curl_opts+=( ) ;;
+    1|2) curl_opts+=( -# ) ;;
     *) curl_opts+=( -v ) ;;
   esac
 
@@ -212,7 +213,16 @@ trap finish SIGHUP SIGINT SIGTERM
 
 has -v curl jq || die
 
-[[ -s "$config_file" ]] && parse_config_file < "$config_file"
+if [[ -s "$config_file" ]]; then
+  parse_config_file
+
+  if (( ${#config_err[@]} > 0 )); then
+    err 'there were errors parsing config file:'
+    for e in "${config_err[@]}"; do
+      err "$e"
+    done
+  fi
+fi
 
 OPTERR=0
 while getopts 'hve:dN' opt; do
