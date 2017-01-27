@@ -41,7 +41,7 @@ OPTIONS:
 CONFIGURATION:
 A configuration file can be defined at ${config_file/$HOME/\~}
 If a line begins with '#' it is treated as a comment and ignored.
-The configuration file reads the following options:
+A configuration file has the following options:
 
   username       teknik.io username
   api_key        teknik.io api key
