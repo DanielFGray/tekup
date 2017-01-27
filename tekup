@@ -3,14 +3,15 @@
 declare verbose=0
 declare expire_length
 declare request_deletion_key
+declare -r conf_dir="${XDG_CONFIG_DIR:-$HOME/.config}/tekup"
+declare -r log_file="${conf_dir}/log"
+declare -r config_file="${conf_dir}/conf"
 declare -A colors
-declare -r log_file="${XDG_CONFIG_DIR:-$HOME/.config}/tekup/log"
-declare -r config_file="${XDG_CONFIG_DIR:-$HOME/.config}/tekup/conf"
 colors[red]=$(tput setaf 1)
 colors[reset]=$(tput sgr0)
 
 err() {
-  printf "%s%s%s\n" "${colors[red]}" "${colors[reset]}" "$*" >&2
+  printf "${colors[red]}%s${colors[reset]}\n" "$*" >&2
 }
 
 die() {
