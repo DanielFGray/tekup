@@ -88,6 +88,12 @@ parse_config_file() {
       *) config_err+=( "unknown key \"$key\" in config file on line $nr" )
     esac
   done < "$config_file"
+  if (( ${#config_err[@]} > 0 )); then
+    err 'there were errors parsing config file:'
+    for e in "${config_err[@]}"; do
+      err "  $e"
+    done
+  fi
 }
 
 upload_text() {
@@ -146,9 +152,15 @@ upload_file() {
 }
 
 upload_files() {
-  local curl_opts f mime
+  local f mime
 
   for f; do
+    if [[ "$f" = '-' ]]; then
+      echo 'reading from stdin'
+      tee /tmp/tekup_paste &> /dev/null
+      f=/tmp/tekup_paste
+    fi
+
     if [[ ! -e "$f" ]]; then
       err "$f does not exist"
       continue
@@ -213,16 +225,7 @@ trap finish SIGHUP SIGINT SIGTERM
 
 has -v curl jq || die
 
-if [[ -s "$config_file" ]]; then
-  parse_config_file
-
-  if (( ${#config_err[@]} > 0 )); then
-    err 'there were errors parsing config file:'
-    for e in "${config_err[@]}"; do
-      err "$e"
-    done
-  fi
-fi
+[[ -s "$config_file" ]] && parse_config_file
 
 OPTERR=0
 while getopts 'hve:dN' opt; do
@@ -237,13 +240,7 @@ done
 shift $(( OPTIND - 1 ))
 unset opt OPTARG OPTIND
 
-files=( "$@" )
+(( $# > 0 )) || die 'No files to upload.'
 
-if read -r -t0 || (( $# == 0 )); then
-  echo 'reading from stdin'
-  tee /tmp/tekup_paste &> /dev/null
-  files+=( /tmp/tekup_paste )
-fi
-
-upload_files "${files[@]}"
+upload_files "$@"
 finish
