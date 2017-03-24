@@ -10,13 +10,14 @@ Command line script to upload files to https://teknik.io
 
 ```
 Usage: tekup [OPTIONS] [FILES...]
-  -h           print this help
   -d           request a deletion key for images
   -e <STRING>  expiration time. only has an effect on text pastes.
                must be in the form of 'N UNIT' where N is a number
                and UNIT is one of the following:
                minute hour day month year
   -N           disables expiring pastes (if enabled in config file, for example)
+  -c           save the url to the clipboard
+  -h           print this help
   -v           print verbose output. can be stacked. there are three levels of
                verbosity (because this thing is over-engineered)
                first will show progress from curl
@@ -35,6 +36,7 @@ api_key        teknik.io api key
 expire_length  same as -e flag above
 do_not_track   asks teknik.io not to log the upload
 verbose_level  must be a number
+clipboard      must be 1 or true
 ```
 
 If `~/.config/tekup/log` is a writeable file tekup will always ask for a deletion key and log it in that file.
