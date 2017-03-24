@@ -215,7 +215,7 @@ parse_response() {
   printf '%s: %s\n' "$file" "$url"
 
   if [[ -n "$clipboard" ]]; then
-    prg=$(select_from 'xclip -r ' 'xsel')
+    prg=$(select_from 'xclip -r ' 'xsel -b')
     if [[ -n "$prg" ]]; then
       $prg <<< "$url"
     else
