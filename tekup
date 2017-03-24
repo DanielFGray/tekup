@@ -48,9 +48,9 @@ A configuration file has the following options:
   username       teknik.io username
   api_key        teknik.io api key
   expire_length  same as -e flag above
-  do_not_track   asks teknik.io not to log the upload
+  do_not_track   boolean, asks teknik.io not to log the upload
   verbose_level  must be a number
-  clipboard      must be 1 or true
+  clipboard      boolean
 
 If ${log_file/$HOME/\~} is a writeable file tekup will always ask for a
 deletion key and log it in that file.
@@ -104,7 +104,7 @@ parse_config_file() {
       api_key)  api_key="$val" ;;
       do_not_track) do_not_track="$val" ;;
       verbose_level) verbose="$val" ;;
-      clipboard) [[ $val =~ 1|true ]] && clipboard=1 ;;
+      clipboard) [[ $val = 'true' ]] && clipboard=1 ;;
       *) config_err+=( "unknown key \"$key\" in config file on line $nr" )
     esac
   done < "$config_file"

@@ -34,9 +34,9 @@ A configuration file has the following options:
 username       teknik.io username
 api_key        teknik.io api key
 expire_length  same as -e flag above
-do_not_track   asks teknik.io not to log the upload
+do_not_track   boolean, asks teknik.io not to log the upload
 verbose_level  must be a number
-clipboard      must be 1 or true
+clipboard      boolean
 ```
 
 If `~/.config/tekup/log` is a writeable file tekup will always ask for a deletion key and log it in that file.
