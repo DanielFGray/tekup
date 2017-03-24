@@ -216,7 +216,11 @@ parse_response() {
 
   if [[ -n "$clipboard" ]]; then
     prg=$(select_from 'xclip -r ' 'xsel')
-    [[ -n "$prg" ]] && $prg <<< "$url"
+    if [[ -n "$prg" ]]; then
+      $prg <<< "$url"
+    else
+      err 'xclip or xsel required for saving to clipboard'
+    fi
   fi
 
   if [[ -w "$log_file" || -n "$request_deletion_key" ]]; then
