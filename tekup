@@ -3,6 +3,7 @@
 declare verbose=0
 declare expire_length
 declare request_deletion_key
+declare clipboard
 declare -r conf_dir="${XDG_CONFIG_DIR:-$HOME/.config}/tekup"
 declare -r log_file="${conf_dir}/log"
 declare -r config_file="${conf_dir}/conf"
@@ -25,13 +26,14 @@ Usage: tekup [OPTIONS] [FILES...]
 Upload files to https://teknik.io
 
 OPTIONS:
-  -h           print this help
   -d           request a deletion key for images
   -e <STRING>  expiration time. only has an effect on text pastes.
                must be in the form of 'N UNIT' where N is a number
                and UNIT is one of the following:
                minute hour day month year
   -N           disables expiring pastes (if enabled in config file, for example)
+  -c           save the url to the clipboard
+  -h           print this help
   -v           print verbose output. can be stacked. there are three levels of
                verbosity (because this thing is over-engineered)
                first will show progress from curl
@@ -48,6 +50,7 @@ A configuration file has the following options:
   expire_length  same as -e flag above
   do_not_track   asks teknik.io not to log the upload
   verbose_level  must be a number
+  clipboard      must be 1 or true
 
 If ${log_file/$HOME/\~} is a writeable file tekup will always ask for a
 deletion key and log it in that file.
@@ -85,6 +88,7 @@ parse_config_file() {
       api_key)  api_key="$val" ;;
       do_not_track) do_not_track="$val" ;;
       verbose_level) verbose="$val" ;;
+      clipboard) [[ $val =~ 1|true ]] && clipboard=1 ;;
       *) config_err+=( "unknown key \"$key\" in config file on line $nr" )
     esac
   done < "$config_file"
@@ -194,6 +198,11 @@ parse_response() {
   file="${file/\/tmp\/tekup_paste/stdin}"
   printf '%s: %s\n' "$file" "$url"
 
+  if [[ -n "$clipboard" ]]; then
+    prg=$(select_from 'xclip -r ' 'xsel')
+    [[ -n "$prg" ]] && $prg <<< "$url"
+  fi
+
   if [[ -w "$log_file" || -n "$request_deletion_key" ]]; then
     deletion_key=$(jq -r '.result.deletionKey' <<< "$response")
     [[ "$deletion_key" = null ]] && deletion_key=''
@@ -230,11 +239,12 @@ has -v curl jq || die
 OPTERR=0
 while getopts 'hve:dN' opt; do
   case "$opt" in
-    h) usage; exit 0 ;;
-    v) (( ++verbose )) ;;
+    d) request_deletion_key=1 ;;
     e) expire_length="$OPTARG" ;;
     N) expire_length='' ;;
-    d) request_deletion_key=1 ;;
+    c) clipboard=1 ;;
+    h) usage; exit 0 ;;
+    v) (( ++verbose )) ;;
   esac
 done
 shift $(( OPTIND - 1 ))
