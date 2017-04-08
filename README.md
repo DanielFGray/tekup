@@ -14,7 +14,7 @@ Usage: tekup [OPTIONS] [FILES...]
   -e <STRING>  expiration time. only has an effect on text pastes.
                must be in the form of 'N UNIT' where N is a number
                and UNIT is one of the following:
-               minute hour day month year
+               view minute hour day month year
   -N           disables expiring pastes (if enabled in config file, for example)
   -c           save the url to the clipboard
   -h           print this help
