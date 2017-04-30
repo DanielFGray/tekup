@@ -166,7 +166,7 @@ upload_file() {
     curl_opts+=( -F 'genDeletionKey=true' )
 
   curl_opts+=(   -F "contentType=${mime%%;*}"
-                 -F "file=@${file}"
+                 -F "file=@\"${file}\""
                  https://api.teknik.io/v1/Upload )
   curl "${curl_opts[@]}" | parse_response
 }
