@@ -19,7 +19,7 @@ Usage: tekup [OPTIONS] [FILES...]
   -c           save the url to the clipboard
   -h           print this help
   -v           print verbose output. can be stacked. there are three levels of
-               verbosity (because this thing is over-engineered)
+               verbosity
                first will show progress from curl
                second will print the json response
                third will show verbose output from curl
@@ -31,7 +31,6 @@ If a line begins with `#` it is treated as a comment and ignored
 A configuration file has the following options:
 
 ```
-username       teknik.io username
 api_key        teknik.io api key
 expire_length  same as -e flag above
 do_not_track   boolean, asks teknik.io not to log the upload

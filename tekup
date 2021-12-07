@@ -35,7 +35,7 @@ OPTIONS:
   -c           save the url to the clipboard
   -h           print this help
   -v           print verbose output. can be stacked. there are three levels of
-               verbosity (because this thing is over-engineered)
+               verbosity:
                first will show progress from curl
                second will print the json response
                third will show verbose output from curl
@@ -45,7 +45,6 @@ A configuration file can be defined at ${config_file/$HOME/\~}
 If a line begins with '#' it is treated as a comment and ignored.
 A configuration file has the following options:
 
-  username       teknik.io username
   api_key        teknik.io api key
   expire_length  same as -e flag above
   do_not_track   boolean, asks teknik.io not to log the upload
@@ -100,7 +99,6 @@ parse_config_file() {
     fi
     case "$key" in
       expire_length) expire_length="$val" ;;
-      username) username="$val" ;;
       api_key)  api_key="$val" ;;
       do_not_track) do_not_track="$val" ;;
       verbose_level) verbose="$val" ;;
@@ -127,8 +125,7 @@ upload_text() {
     *) curl_opts+=( -v ) ;;
   esac
 
-  [[ -n "$username" && -n "$api_key" ]] &&
-    curl_opts+=( -u "${username}:${api_key}" )
+  [[ -n "$api_key" ]] && curl_opts+=( -H "Authorization: AuthToken ${api_key}" )
 
   if [[ -n "$expire_length" ]]; then
     printf -v expire_l '%d' "${expire_length% *}"
@@ -157,8 +154,7 @@ upload_file() {
     *) curl_opts+=( -v ) ;;
   esac
 
-  [[ -n "$username" && -n "$api_key" ]] &&
-    curl_opts+=( -u "${username}:${api_key}" )
+  [[ -n "$api_key" ]] && curl_opts+=( -H "Authorization: AuthToken ${api_key}" )
 
   curl_opts+=( ${do_not_track:+ -F "doNotTrack=${do_not_track}"} )
 
@@ -216,11 +212,8 @@ parse_response() {
 
   if [[ -n "$clipboard" ]]; then
     prg=$(select_from 'xclip -r ' 'xsel -b')
-    if [[ -n "$prg" ]]; then
-      $prg <<< "$url"
-    else
-      err 'xclip or xsel required for saving to clipboard'
-    fi
+    [[ -z "$prg" ]] && err 'xclip or xsel required for writing to clipboard'
+    $prg <<< "$url"
   fi
 
   if [[ -w "$log_file" || -n "$request_deletion_key" ]]; then
